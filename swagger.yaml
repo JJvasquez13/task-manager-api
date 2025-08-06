@@ -1,0 +1,276 @@
+openapi: 3.0.0
+info:
+    title: Task Manager API
+    version: 1.0.0
+    description: API para el manejo de tareas con CRUD completo
+servers:
+    - url: http://localhost:3000
+      description: Servidor local
+paths:
+    /tasks:
+        get:
+            summary: Obtener todas las tareas
+            tags:
+                - Tasks
+            responses:
+                '200':
+                    description: Lista de todas las tareas
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/Task'
+                '500':
+                    description: Error del servidor
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+        post:
+            summary: Crear una nueva tarea
+            tags:
+                - Tasks
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/TaskInput'
+            responses:
+                '201':
+                    description: Tarea creada
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Task'
+                '400':
+                    description: Error en los datos enviados
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '500':
+                    description: Error del servidor
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+    /tasks/{id}:
+        get:
+            summary: Obtener una tarea por ID
+            tags:
+                - Tasks
+            parameters:
+                - in: path
+                  name: id
+                  schema:
+                      type: string
+                  required: true
+                  description: ID de la tarea
+            responses:
+                '200':
+                    description: Tarea encontrada
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Task'
+                '404':
+                    description: Tarea no encontrada
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '500':
+                    description: Error del servidor
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+        put:
+            summary: Actualizar una tarea existente
+            tags:
+                - Tasks
+            parameters:
+                - in: path
+                  name: id
+                  schema:
+                      type: string
+                  required: true
+                  description: ID de la tarea
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/TaskInput'
+            responses:
+                '200':
+                    description: Tarea actualizada
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Task'
+                '400':
+                    description: Error en los datos enviados
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '404':
+                    description: Tarea no encontrada
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '500':
+                    description: Error del servidor
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+        delete:
+            summary: Eliminar una tarea
+            tags:
+                - Tasks
+            parameters:
+                - in: path
+                  name: id
+                  schema:
+                      type: string
+                  required: true
+                  description: ID de la tarea
+            responses:
+                '200':
+                    description: Tarea eliminada
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                        example: Tarea eliminada correctamente
+                '404':
+                    description: Tarea no encontrada
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '500':
+                    description: Error del servidor
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+    /tasks/by-title/{title}:
+        get:
+            summary: Obtener una tarea por título
+            tags:
+                - Tasks
+            parameters:
+                - in: path
+                  name: title
+                  schema:
+                      type: string
+                  required: true
+                  description: Título de la tarea (búsqueda exacta, insensible a mayúsculas/minúsculas)
+            responses:
+                '200':
+                    description: Tarea encontrada
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Task'
+                '404':
+                    description: Tarea no encontrada
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '500':
+                    description: Error del servidor
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+components:
+    schemas:
+        Task:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: ID único de la tarea
+                    example: 60d0fe4f5311236168a109ca
+                title:
+                    type: string
+                    description: Título de la tarea (máx. 50 caracteres)
+                    example: Completar proyecto
+                description:
+                    type: string
+                    description: Descripción corta de la tarea (máx. 200 caracteres)
+                    example: Terminar la API de tareas
+                longDescription:
+                    type: string
+                    description: Descripción extendida de la tarea (máx. 2000 caracteres)
+                    example: Este proyecto requiere completar la implementación de una API RESTful con Express y MongoDB, incluyendo documentación con Swagger.
+                createdAt:
+                    type: string
+                    format: date-time
+                    description: Fecha de creación de la tarea
+                    example: 2025-08-05T14:55:00.000Z
+                dueDate:
+                    type: string
+                    format: date-time
+                    description: Fecha de finalización de la tarea
+                    example: 2025-08-10T23:59:59.000Z
+                status:
+                    type: string
+                    enum: [en curso, completado]
+                    description: Estado de la tarea
+                    example: en curso
+            required:
+                - title
+                - description
+                - dueDate
+        TaskInput:
+            type: object
+            properties:
+                title:
+                    type: string
+                    description: Título de la tarea (máx. 50 caracteres)
+                    example: Completar proyecto
+                description:
+                    type: string
+                    description: Descripción corta de la tarea (máx. 200 caracteres)
+                    example: Terminar la API de tareas
+                longDescription:
+                    type: string
+                    description: Descripción extendida de la tarea (máx. 2000 caracteres)
+                    example: Este proyecto requiere completar la implementación de una API RESTful con Express y MongoDB, incluyendo documentación con Swagger.
+                dueDate:
+                    type: string
+                    format: date-time
+                    description: Fecha de finalización de la tarea
+                    example: 2025-08-10T23:59:59.000Z
+                status:
+                    type: string
+                    enum: [en curso, completado]
+                    description: Estado de la tarea
+                    example: en curso
+            required:
+                - title
+                - description
+                - dueDate
+        Error:
+            type: object
+            properties:
+                message:
+                    type: string
+                    description: Mensaje de error
+                    example: Error al obtener las tareas
+                error:
+                    type: string
+                    description: Detalle del error
+                    example: Error interno del servidor
