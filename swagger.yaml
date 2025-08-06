@@ -2,16 +2,137 @@ openapi: 3.0.0
 info:
     title: Task Manager API
     version: 1.0.0
-    description: API para el manejo de tareas con CRUD completo
+    description: |
+        API para el manejo de tareas con autenticación mediante una API de seguridad externa.  
+        **Autenticación**: Requiere un JWT en la cookie `token`, validado por la API de seguridad en `${AUTH_API_URL}/users/profile`.  
+        **CSRF Protection**: Los endpoints POST, PUT y DELETE requieren el header `X-XSRF-TOKEN` que coincida con la cookie `XSRF-TOKEN`.  
+        Para obtener la cookie `XSRF-TOKEN`, realiza una solicitud GET a cualquier endpoint (e.g., `GET /tasks`).  
+        **Instrucciones para Postman**:  
+        1. Habilita el cookie jar en Postman.  
+        2. Realiza una solicitud `GET /tasks` para obtener la cookie `XSRF-TOKEN`.  
+        3. Copia el valor de `XSRF-TOKEN` desde la pestaña Cookies.  
+        4. Incluye `X-XSRF-TOKEN: [valor]` en los headers de las solicitudes POST, PUT, DELETE.
 servers:
     - url: http://localhost:3000
       description: Servidor local
+components:
+    securitySchemes:
+        cookieAuth:
+            type: apiKey
+            in: cookie
+            name: token
+            description: JWT access token stored in an HTTP-only cookie, validated by the external security API.
+        csrfToken:
+            type: apiKey
+            in: header
+            name: X-XSRF-TOKEN
+            description: |
+                CSRF token required for POST, PUT, DELETE requests. Must match the `XSRF-TOKEN` cookie.  
+                Obtain it via a GET request (e.g., `GET /tasks`).
+    schemas:
+        Task:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: ID único de la tarea
+                    example: 60d0fe4f5311236168a109ca
+                title:
+                    type: string
+                    description: Título de la tarea (máx. 50 caracteres)
+                    example: Completar proyecto
+                description:
+                    type: string
+                    description: Descripción corta de la tarea (máx. 200 caracteres)
+                    example: Terminar la API de tareas
+                longDescription:
+                    type: string
+                    description: Descripción extendida de la tarea (máx. 2000 caracteres)
+                    example: Este proyecto requiere completar una API RESTful con Express y MongoDB.
+                createdAt:
+                    type: string
+                    format: date-time
+                    description: Fecha de creación de la tarea
+                    example: 2025-08-05T14:55:00.000Z
+                dueDate:
+                    type: string
+                    format: date-time
+                    description: Fecha de finalización de la tarea
+                    example: 2025-08-10T23:59:59.000Z
+                status:
+                    type: string
+                    enum: [en curso, completado]
+                    description: Estado de la tarea
+                    example: en curso
+                userId:
+                    type: string
+                    description: ID del usuario propietario de la tarea
+                    example: 507f1f77bcf86cd799439011
+            required:
+                - title
+                - description
+                - dueDate
+                - userId
+        TaskInput:
+            type: object
+            properties:
+                title:
+                    type: string
+                    description: Título de la tarea (máx. 50 caracteres)
+                    example: Completar proyecto
+                description:
+                    type: string
+                    description: Descripción corta de la tarea (máx. 200 caracteres)
+                    example: Terminar la API de tareas
+                longDescription:
+                    type: string
+                    description: Descripción extendida de la tarea (máx. 2000 caracteres)
+                    example: Este proyecto requiere completar una API RESTful con Express y MongoDB.
+                dueDate:
+                    type: string
+                    format: date-time
+                    description: Fecha de finalización de la tarea
+                    example: 2025-08-10T23:59:59.000Z
+                status:
+                    type: string
+                    enum: [en curso, completado]
+                    description: Estado de la tarea
+                    example: en curso
+            required:
+                - title
+                - description
+                - dueDate
+        Error:
+            type: object
+            properties:
+                status:
+                    type: string
+                    enum: [error]
+                    example: error
+                message:
+                    type: string
+                    example: Error al obtener las tareas
+                errors:
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            msg:
+                                type: string
+                            param:
+                                type: string
+                            location:
+                                type: string
+                            value:
+                                type: string
 paths:
     /tasks:
         get:
-            summary: Obtener todas las tareas
+            summary: Obtener todas las tareas del usuario autenticado
             tags:
                 - Tasks
+            security:
+                - cookieAuth: []
             responses:
                 '200':
                     description: Lista de todas las tareas
@@ -21,6 +142,12 @@ paths:
                                 type: array
                                 items:
                                     $ref: '#/components/schemas/Task'
+                '401':
+                    description: No autorizado
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
                 '500':
                     description: Error del servidor
                     content:
@@ -31,6 +158,9 @@ paths:
             summary: Crear una nueva tarea
             tags:
                 - Tasks
+            security:
+                - cookieAuth: []
+                - csrfToken: []
             requestBody:
                 required: true
                 content:
@@ -50,6 +180,27 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Error'
+                '401':
+                    description: No autorizado
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '403':
+                    description: Invalid or missing CSRF token
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                                example:
+                                    status: error
+                                    message: invalid csrf token
+                '429':
+                    description: Too many requests
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
                 '500':
                     description: Error del servidor
                     content:
@@ -61,6 +212,8 @@ paths:
             summary: Obtener una tarea por ID
             tags:
                 - Tasks
+            security:
+                - cookieAuth: []
             parameters:
                 - in: path
                   name: id
@@ -75,6 +228,12 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Task'
+                '401':
+                    description: No autorizado
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
                 '404':
                     description: Tarea no encontrada
                     content:
@@ -91,6 +250,9 @@ paths:
             summary: Actualizar una tarea existente
             tags:
                 - Tasks
+            security:
+                - cookieAuth: []
+                - csrfToken: []
             parameters:
                 - in: path
                   name: id
@@ -117,8 +279,29 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Error'
+                '401':
+                    description: No autorizado
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '403':
+                    description: Invalid or missing CSRF token
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                                example:
+                                    status: error
+                                    message: invalid csrf token
                 '404':
                     description: Tarea no encontrada
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '429':
+                    description: Too many requests
                     content:
                         application/json:
                             schema:
@@ -133,6 +316,9 @@ paths:
             summary: Eliminar una tarea
             tags:
                 - Tasks
+            security:
+                - cookieAuth: []
+                - csrfToken: []
             parameters:
                 - in: path
                   name: id
@@ -148,11 +334,35 @@ paths:
                             schema:
                                 type: object
                                 properties:
+                                    status:
+                                        type: string
+                                        example: success
                                     message:
                                         type: string
                                         example: Tarea eliminada correctamente
+                '401':
+                    description: No autorizado
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '403':
+                    description: Invalid or missing CSRF token
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                                example:
+                                    status: error
+                                    message: invalid csrf token
                 '404':
                     description: Tarea no encontrada
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '429':
+                    description: Too many requests
                     content:
                         application/json:
                             schema:
@@ -168,6 +378,8 @@ paths:
             summary: Obtener una tarea por título
             tags:
                 - Tasks
+            security:
+                - cookieAuth: []
             parameters:
                 - in: path
                   name: title
@@ -182,6 +394,12 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Task'
+                '401':
+                    description: No autorizado
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
                 '404':
                     description: Tarea no encontrada
                     content:
@@ -194,83 +412,3 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Error'
-components:
-    schemas:
-        Task:
-            type: object
-            properties:
-                id:
-                    type: string
-                    description: ID único de la tarea
-                    example: 60d0fe4f5311236168a109ca
-                title:
-                    type: string
-                    description: Título de la tarea (máx. 50 caracteres)
-                    example: Completar proyecto
-                description:
-                    type: string
-                    description: Descripción corta de la tarea (máx. 200 caracteres)
-                    example: Terminar la API de tareas
-                longDescription:
-                    type: string
-                    description: Descripción extendida de la tarea (máx. 2000 caracteres)
-                    example: Este proyecto requiere completar la implementación de una API RESTful con Express y MongoDB, incluyendo documentación con Swagger.
-                createdAt:
-                    type: string
-                    format: date-time
-                    description: Fecha de creación de la tarea
-                    example: 2025-08-05T14:55:00.000Z
-                dueDate:
-                    type: string
-                    format: date-time
-                    description: Fecha de finalización de la tarea
-                    example: 2025-08-10T23:59:59.000Z
-                status:
-                    type: string
-                    enum: [en curso, completado]
-                    description: Estado de la tarea
-                    example: en curso
-            required:
-                - title
-                - description
-                - dueDate
-        TaskInput:
-            type: object
-            properties:
-                title:
-                    type: string
-                    description: Título de la tarea (máx. 50 caracteres)
-                    example: Completar proyecto
-                description:
-                    type: string
-                    description: Descripción corta de la tarea (máx. 200 caracteres)
-                    example: Terminar la API de tareas
-                longDescription:
-                    type: string
-                    description: Descripción extendida de la tarea (máx. 2000 caracteres)
-                    example: Este proyecto requiere completar la implementación de una API RESTful con Express y MongoDB, incluyendo documentación con Swagger.
-                dueDate:
-                    type: string
-                    format: date-time
-                    description: Fecha de finalización de la tarea
-                    example: 2025-08-10T23:59:59.000Z
-                status:
-                    type: string
-                    enum: [en curso, completado]
-                    description: Estado de la tarea
-                    example: en curso
-            required:
-                - title
-                - description
-                - dueDate
-        Error:
-            type: object
-            properties:
-                message:
-                    type: string
-                    description: Mensaje de error
-                    example: Error al obtener las tareas
-                error:
-                    type: string
-                    description: Detalle del error
-                    example: Error interno del servidor

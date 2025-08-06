@@ -1,7 +1,7 @@
 {
   "name": "task-manager-api",
   "version": "1.0.0",
-  "description": "API para el manejo de tareas",
+  "description": "API para el manejo de tareas con autenticación externa",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -13,7 +13,13 @@
     "dotenv": "^16.0.3",
     "express-validator": "^7.0.1",
     "swagger-ui-express": "^5.0.0",
-    "js-yaml": "^4.1.0"
+    "js-yaml": "^4.1.0",
+    "axios": "^1.6.0",
+    "csurf": "^1.11.0",
+    "cookie-parser": "^1.4.6",
+    "express-rate-limit": "^7.1.0",
+    "cors": "^2.8.5",
+    "winston": "^3.8.2"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

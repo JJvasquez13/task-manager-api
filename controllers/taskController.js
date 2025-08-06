@@ -1,80 +1,174 @@
-const Task = require('../models/Task');
+const Task = require("../models/Task");
+const mongoose = require("mongoose");
+const logger = require("../utils/logger");
 
 const getAllTasks = async (req, res) => {
-    try {
-        const tasks = await Task.find();
-        res.json(tasks);
-    } catch (error) {
-        res.status(500).json({ message: 'Error al obtener las tareas', error: error.message });
-    }
+  try {
+    const tasks = await Task.find({ userId: req.user.id });
+    logger.info(
+      `Obtenidas ${tasks.length} tareas para usuario: ${req.user.id}`
+    );
+    res.json(tasks);
+  } catch (error) {
+    logger.error(
+      `Error al obtener tareas para usuario ${req.user.id}: ${error.message}`
+    );
+    res.status(500).json({
+      status: "error",
+      message: "Error al obtener las tareas",
+      error: error.message,
+    });
+  }
 };
 
 const getTaskById = async (req, res) => {
-    try {
-        const task = await Task.findById(req.params.id);
-        if (!task) {
-            return res.status(404).json({ message: 'Tarea no encontrada' });
-        }
-        res.json(task);
-    } catch (error) {
-        res.status(500).json({ message: 'Error al obtener la tarea', error: error.message });
+  try {
+    const task = await Task.findOne({
+      _id: req.params.id,
+      userId: req.user.id,
+    });
+    if (!task) {
+      logger.warn(
+        `Tarea no encontrada: ${req.params.id} para usuario ${req.user.id}`
+      );
+      return res
+        .status(404)
+        .json({ status: "error", message: "Tarea no encontrada" });
     }
+    logger.info(`Tarea obtenida: ${req.params.id} para usuario ${req.user.id}`);
+    res.json(task);
+  } catch (error) {
+    logger.error(`Error al obtener tarea ${req.params.id}: ${error.message}`);
+    res.status(500).json({
+      status: "error",
+      message: "Error al obtener la tarea",
+      error: error.message,
+    });
+  }
 };
 
 const getTaskByTitle = async (req, res) => {
-    try {
-        const task = await Task.findOne({ title: new RegExp('^' + req.params.title + '$', 'i') });
-        if (!task) {
-            return res.status(404).json({ message: 'Tarea no encontrada' });
-        }
-        res.json(task);
-    } catch (error) {
-        res.status(500).json({ message: 'Error al obtener la tarea', error: error.message });
+  try {
+    const task = await Task.findOne({
+      title: new RegExp("^" + req.params.title + "$", "i"),
+      userId: req.user.id,
+    });
+    if (!task) {
+      logger.warn(
+        `Tarea no encontrada por título: ${req.params.title} para usuario ${req.user.id}`
+      );
+      return res
+        .status(404)
+        .json({ status: "error", message: "Tarea no encontrada" });
     }
+    logger.info(
+      `Tarea obtenida por título: ${req.params.title} para usuario ${req.user.id}`
+    );
+    res.json(task);
+  } catch (error) {
+    logger.error(
+      `Error al obtener tarea por título ${req.params.title}: ${error.message}`
+    );
+    res.status(500).json({
+      status: "error",
+      message: "Error al obtener la tarea",
+      error: error.message,
+    });
+  }
 };
 
 const createTask = async (req, res) => {
-    try {
-        const task = new Task(req.body);
-        const savedTask = await task.save();
-        res.status(201).json(savedTask);
-    } catch (error) {
-        res.status(400).json({ message: 'Error al crear la tarea', error: error.message });
+  try {
+    if (!req.user || !req.user.id) {
+      logger.warn("ID de usuario no disponible en createTask");
+      return res
+        .status(400)
+        .json({ status: "error", message: "ID de usuario no disponible" });
     }
+    const taskData = {
+      ...req.body,
+      userId: new mongoose.Types.ObjectId(req.user.id), // Usar 'new' para ObjectId
+    };
+    const task = new Task(taskData);
+    const savedTask = await task.save();
+    logger.info(`Tarea creada: ${savedTask._id} para usuario ${req.user.id}`);
+    res.status(201).json(savedTask);
+  } catch (error) {
+    logger.error(
+      `Error al crear tarea para usuario ${req.user.id}: ${error.message}`
+    );
+    res.status(400).json({
+      status: "error",
+      message: "Error al crear la tarea",
+      error: error.message,
+    });
+  }
 };
 
 const updateTask = async (req, res) => {
-    try {
-        const task = await Task.findByIdAndUpdate(req.params.id, req.body, {
-            new: true,
-            runValidators: true,
-        });
-        if (!task) {
-            return res.status(404).json({ message: 'Tarea no encontrada' });
-        }
-        res.json(task);
-    } catch (error) {
-        res.status(400).json({ message: 'Error al actualizar la tarea', error: error.message });
+  try {
+    const task = await Task.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user.id },
+      req.body,
+      { new: true, runValidators: true }
+    );
+    if (!task) {
+      logger.warn(
+        `Tarea no encontrada para actualizar: ${req.params.id} para usuario ${req.user.id}`
+      );
+      return res
+        .status(404)
+        .json({ status: "error", message: "Tarea no encontrada" });
     }
+    logger.info(
+      `Tarea actualizada: ${req.params.id} para usuario ${req.user.id}`
+    );
+    res.json(task);
+  } catch (error) {
+    logger.error(
+      `Error al actualizar tarea ${req.params.id}: ${error.message}`
+    );
+    res.status(400).json({
+      status: "error",
+      message: "Error al actualizar la tarea",
+      error: error.message,
+    });
+  }
 };
 
 const deleteTask = async (req, res) => {
-    try {
-        const task = await Task.findByIdAndDelete(req.params.id);
-        if (!task) {
-            return res.status(404).json({ message: 'Tarea no encontrada' });
-        }
-        res.json({ message: 'Tarea eliminada correctamente' });
-    } catch (error) {
-        res.status(500).json({ message: 'Error al eliminar la tarea', error: error.message });
+  try {
+    const task = await Task.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.user.id,
+    });
+    if (!task) {
+      logger.warn(
+        `Tarea no encontrada para eliminar: ${req.params.id} para usuario ${req.user.id}`
+      );
+      return res
+        .status(404)
+        .json({ status: "error", message: "Tarea no encontrada" });
     }
+    logger.info(
+      `Tarea eliminada: ${req.params.id} para usuario ${req.user.id}`
+    );
+    res.json({ status: "success", message: "Tarea eliminada correctamente" });
+  } catch (error) {
+    logger.error(`Error al eliminar tarea ${req.params.id}: ${error.message}`);
+    res.status(500).json({
+      status: "error",
+      message: "Error al eliminar la tarea",
+      error: error.message,
+    });
+  }
 };
 
 module.exports = {
-    getAllTasks,
-    getTaskById,
-    getTaskByTitle,
-    createTask,
-    updateTask,
-    deleteTask,
+  getAllTasks,
+  getTaskById,
+  getTaskByTitle,
+  createTask,
+  updateTask,
+  deleteTask,
 };
