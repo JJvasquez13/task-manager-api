@@ -14,11 +14,13 @@ dotenv.config();
 
 const app = express();
 
-// Configurar CORS
+const FRONTEND_URL = "http://localhost:5173"; // Ajusta aquí el puerto correcto
+
+// CORS
 app.use(
   cors({
-    origin: ["http://localhost:3001"], // Permitir frontend (ajusta según el puerto del frontend)
-    credentials: true, // Permitir cookies (token, XSRF-TOKEN)
+    origin: FRONTEND_URL,
+    credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "X-XSRF-TOKEN"],
   })
@@ -27,20 +29,22 @@ app.use(
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
-app.use(
-  csrf({
-    cookie: {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-    },
-  })
-);
+
+//CSRF Protection
+const csrfProtection = csrf({
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  },
+});
+app.use(csrfProtection);
 
 // Set XSRF-TOKEN cookie on all GET requests
 app.use((req, res, next) => {
   if (req.method === "GET") {
     res.cookie("XSRF-TOKEN", req.csrfToken(), {
+      httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
     });

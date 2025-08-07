@@ -1,5 +1,13 @@
 const mongoose = require("mongoose");
 
+function isDateTodayOrFuture(value) {
+  const inputDate = new Date(value);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  inputDate.setHours(0, 0, 0, 0);
+  return inputDate >= today;
+}
+
 const taskSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -26,20 +34,26 @@ const taskSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  startDate: {
+    type: Date,
+    required: [true, "La fecha de inicio es obligatoria"],
+    validate: {
+      validator: isDateTodayOrFuture,
+      message: "La fecha de inicio debe ser hoy o futura",
+    },
+  },
   dueDate: {
     type: Date,
     required: [true, "La fecha de finalización es obligatoria"],
     validate: {
-      validator: function (value) {
-        return value >= new Date();
-      },
-      message: "La fecha de finalización debe ser futura",
+      validator: isDateTodayOrFuture,
+      message: "La fecha de finalización debe ser hoy o futura",
     },
   },
   status: {
     type: String,
-    enum: ["en curso", "completado"],
-    default: "en curso",
+    enum: ["Sin iniciar", "En curso", "Completado"],
+    default: "Sin iniciar",
   },
   userId: {
     type: mongoose.Schema.Types.ObjectId,

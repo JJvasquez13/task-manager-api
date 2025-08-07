@@ -23,21 +23,40 @@ const validateTask = [
     )
     .trim()
     .escape(),
+  body("startDate")
+    .notEmpty()
+    .withMessage("La fecha de inicio es obligatoria")
+    .isISO8601()
+    .withMessage("La fecha de inicio debe ser una fecha válida")
+    .custom((value) => {
+      const inputDate = new Date(value);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      inputDate.setHours(0, 0, 0, 0);
+      if (inputDate < today) {
+        throw new Error("La fecha de inicio debe ser hoy o futura");
+      }
+      return true;
+    }),
   body("dueDate")
     .notEmpty()
     .withMessage("La fecha de finalización es obligatoria")
     .isISO8601()
     .withMessage("La fecha de finalización debe ser una fecha válida")
     .custom((value) => {
-      if (new Date(value) < new Date()) {
-        throw new Error("La fecha de finalización debe ser futura");
+      const inputDate = new Date(value);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      inputDate.setHours(0, 0, 0, 0);
+      if (inputDate < today) {
+        throw new Error("La fecha de finalización debe ser hoy o futura");
       }
       return true;
     }),
   body("status")
     .optional()
-    .isIn(["en curso", "completado"])
-    .withMessage('El estado debe ser "en curso" o "completado"'),
+    .isIn(["Sin iniciar", "En curso", "Completado"])
+    .withMessage('El estado debe ser "Sin iniciar", "En curso" o "Completado"'),
   (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
