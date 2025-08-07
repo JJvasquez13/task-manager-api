@@ -51,19 +51,16 @@ components:
           example: Este proyecto requiere completar una API RESTful con Express y MongoDB.
         createdAt:
           type: string
-          format: date-time
-          description: Fecha de creación de la tarea
-          example: 2025-08-05T14:55:00.000Z
+          description: Fecha de creación de la tarea (formato DD/MM/YYYY, sin hora)
+          example: 06/08/2025
         startDate:
           type: string
-          format: date-time
-          description: Fecha de inicio de la tarea
-          example: 2025-08-06T09:00:00.000Z
+          description: Fecha de inicio de la tarea (formato DD/MM/YYYY, sin hora)
+          example: 06/08/2025
         dueDate:
           type: string
-          format: date-time
-          description: Fecha de finalización de la tarea
-          example: 2025-08-10T23:59:59.000Z
+          description: Fecha de finalización de la tarea (formato DD/MM/YYYY, sin hora)
+          example: 10/08/2025
         status:
           type: string
           enum: [Sin iniciar, En curso, Completado]
@@ -96,14 +93,12 @@ components:
           example: Este proyecto requiere completar una API RESTful con Express y MongoDB.
         startDate:
           type: string
-          format: date-time
-          description: Fecha de inicio de la tarea
-          example: 2025-08-06T09:00:00.000Z
+          description: Fecha de inicio de la tarea (formato DD/MM/YYYY, sin hora)
+          example: 06/08/2025
         dueDate:
           type: string
-          format: date-time
-          description: Fecha de finalización de la tarea
-          example: 2025-08-10T23:59:59.000Z
+          description: Fecha de finalización de la tarea (formato DD/MM/YYYY, sin hora)
+          example: 10/08/2025
         status:
           type: string
           enum: [Sin iniciar, En curso, Completado]

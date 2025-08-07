@@ -11,7 +11,7 @@ const validateTask = [
   body("description")
     .notEmpty()
     .withMessage("La descripción es obligatoria")
-    .isLength({ max: 200 })
+    .isLength({ max: 75 })
     .withMessage("La descripción no puede exceder los 200 caracteres")
     .trim()
     .escape(),
@@ -26,10 +26,14 @@ const validateTask = [
   body("startDate")
     .notEmpty()
     .withMessage("La fecha de inicio es obligatoria")
-    .isISO8601()
-    .withMessage("La fecha de inicio debe ser una fecha válida")
+    .matches(/^\d{2}\/\d{2}\/\d{4}$/)
+    .withMessage("La fecha de inicio debe estar en formato DD/MM/YYYY")
     .custom((value) => {
-      const inputDate = new Date(value);
+      const [day, month, year] = value.split("/").map(Number);
+      const inputDate = new Date(year, month - 1, day);
+      if (isNaN(inputDate.getTime())) {
+        throw new Error("La fecha de inicio no es válida");
+      }
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       inputDate.setHours(0, 0, 0, 0);
@@ -41,10 +45,14 @@ const validateTask = [
   body("dueDate")
     .notEmpty()
     .withMessage("La fecha de finalización es obligatoria")
-    .isISO8601()
-    .withMessage("La fecha de finalización debe ser una fecha válida")
+    .matches(/^\d{2}\/\d{2}\/\d{4}$/)
+    .withMessage("La fecha de finalización debe estar en formato DD/MM/YYYY")
     .custom((value) => {
-      const inputDate = new Date(value);
+      const [day, month, year] = value.split("/").map(Number);
+      const inputDate = new Date(year, month - 1, day);
+      if (isNaN(inputDate.getTime())) {
+        throw new Error("La fecha de finalización no es válida");
+      }
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       inputDate.setHours(0, 0, 0, 0);
@@ -61,6 +69,15 @@ const validateTask = [
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ status: "error", errors: errors.array() });
+    }
+    // Convert DD/MM/YYYY to Date objects before saving
+    if (req.body.startDate) {
+      const [day, month, year] = req.body.startDate.split("/").map(Number);
+      req.body.startDate = new Date(year, month - 1, day);
+    }
+    if (req.body.dueDate) {
+      const [day, month, year] = req.body.dueDate.split("/").map(Number);
+      req.body.dueDate = new Date(year, month - 1, day);
     }
     next();
   },
