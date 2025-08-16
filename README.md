@@ -6,7 +6,7 @@ Se debe clonar la rama Dev
 ya que este es el que tiene los cambios reales de lo que se esta utilizando actualmente en la Api
 
 Para clonarlo se utiliza:
-
+git clone -b Dev https://github.com/JJvasquez13/task-manager-api.git
 
 npm install
 (Para descargar todas las dependencias necesarias para su funcionamineto)
