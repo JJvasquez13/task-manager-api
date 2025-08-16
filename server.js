@@ -9,38 +9,40 @@ const cookieParser = require("cookie-parser");
 const csrf = require("csurf");
 const cors = require("cors");
 
-// Cargar variables de entorno
 dotenv.config();
 
 const app = express();
 
-// Configurar CORS
+const FRONTEND_URL = "http://localhost:5173"; // Ajusta aquí el puerto correcto
+
+// CORS: debe ir antes de cualquier middleware que use cookies o CSRF
 app.use(
   cors({
-    origin: ["http://localhost:3001"], // Permitir frontend (ajusta según el puerto del frontend)
-    credentials: true, // Permitir cookies (token, XSRF-TOKEN)
+    origin: FRONTEND_URL,
+    credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "X-XSRF-TOKEN"],
   })
 );
 
-// Middleware
 app.use(express.json());
 app.use(cookieParser());
-app.use(
-  csrf({
-    cookie: {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-    },
-  })
-);
 
-// Set XSRF-TOKEN cookie on all GET requests
+// Protección CSRF
+const csrfProtection = csrf({
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  },
+});
+app.use(csrfProtection);
+
+// Enviar la cookie XSRF-TOKEN para que el frontend pueda leer el token CSRF
 app.use((req, res, next) => {
   if (req.method === "GET") {
     res.cookie("XSRF-TOKEN", req.csrfToken(), {
+      httpOnly: false, // <--- para que JS del frontend pueda leerla
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
     });
@@ -51,7 +53,7 @@ app.use((req, res, next) => {
 // Rutas
 app.use("/tasks", taskRoutes);
 
-// Cargar y servir documentación Swagger desde YAML
+// Documentación Swagger
 const swaggerDocument = yaml.load(fs.readFileSync("./swagger.yaml", "utf8"));
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
@@ -59,13 +61,9 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use((err, req, res, next) => {
   console.error(err.stack);
   if (err.code === "EBADCSRFTOKEN") {
-    return res
-      .status(403)
-      .json({ status: "error", message: "invalid csrf token" });
+    return res.status(403).json({ status: "error", message: "invalid csrf token" });
   }
-  res
-    .status(500)
-    .json({ status: "error", message: "Algo salió mal", error: err.message });
+  res.status(500).json({ status: "error", message: "Algo salió mal", error: err.message });
 });
 
 // Conexión a MongoDB y arranque del servidor
@@ -77,9 +75,7 @@ mongoose
   })
   .then(() => {
     console.log("Conectado a MongoDB");
-    app.listen(PORT, () =>
-      console.log(`Servidor corriendo en el puerto ${PORT}`)
-    );
+    app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));
   })
   .catch((err) => console.error("Error al conectar a MongoDB:", err));
 
